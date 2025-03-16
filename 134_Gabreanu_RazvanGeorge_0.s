@@ -14,7 +14,7 @@
     formatStringCitire: .asciz "%ld"            ;//Ce citim
     formatString0: .asciz "%d: (%d, %d)\n"      ;//Output pentru 1 3 4
     formatString1: .asciz "(%d, %d)\n"          ;//Output pentru 2
-    ok: .space 4                                ;//PENTRU CA AM CEDAT PSIHIC CU SORTAREA DE LISTA
+    ok: .space 4                                ;//Auxiliara
     aux3: .space 4
 .text
 citire_rand:
@@ -436,7 +436,7 @@ opsortflist:
         movl -16(%ebp), %ebx
 
         movl $1, %eax
-        movl %eax, ok                           ;//JUR CA NU INTELEG DE CE FUNCTIONEAZA ASA DAR ALTFEL NU SE POATE
+        movl %eax, ok                           
 
         movl -20(%ebp), %eax                    ;//endx pentru id salvat
 
