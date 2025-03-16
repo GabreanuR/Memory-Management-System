@@ -26,10 +26,10 @@
     aux8: .space 4                                          ;//Auxiliara8 pt adddefraf
     aux9: .space 4                                          ;//Auxiliara9 pt adddefraf
     aux10: .space 4                                         ;//Auxiliara10 pt adddefraf
-    aux11: .space 4                                         ;//Auxiliara11 pt adddefrag SPER CA ULTIMUL
-    aux12: .space 4                                         ;//Probabil se putea mai bine decat cu 12 aux uri
-    aux13: .space 4                                         ;//Dezamagire
-    aux14: .space 4                                         ;//Acum gata pe bune
+    aux11: .space 4                                         ;//Auxiliara11 pt adddefrag 
+    aux12: .space 4                                         ;//Auxiliara12
+    aux13: .space 4                                         ;//Auxiliara13
+    aux14: .space 4                                         ;//Auxiliara14
     difline: .space 4                                       ;//spatiul ramas pe linie
     t: .space 10                                            ;//Variabila test
     p: .space 1024                                          ;//Path ul catre folder
@@ -43,7 +43,7 @@
     EBX: .space 4                                           ;//Poate avem nevoie
     ECX: .space 4                                           ;//Poate avem nevoie
     EDX: .space 4                                           ;//Poate avem nevoie
-    ok: .space 4                                            ;//PENTRU CA AM CEDAT PSIHIC CU SORTAREA DE LISTA
+    ok: .space 4                                            ;//Auxiliara
     ok2: .space 4                                           ;//pt concrete ca gen avem fisiere minune . si ..
     formatStringCitire: .asciz "%ld"                        ;//Ce citim
     formatString0: .asciz "%d: ((%d, %d), (%d, %d))\n"      ;//Output pentru 1 3 4
@@ -927,7 +927,7 @@ opsortflist:
         movl -16(%ebp), %ebx
 
         movl $1, %eax
-        movl %eax, ok                           ;//JUR CA NU INTELEG DE CE FUNCTIONEAZA ASA DAR ALTFEL NU SE POATE
+        movl %eax, ok                           
 
         movl -20(%ebp), %eax                    ;//endx pentru id salvat
 
@@ -1454,7 +1454,6 @@ main:
         movl $0, %eax
         movb (%ebx), %al                        ;//de aici + 1 incepe informatia legata de fiecare fisier in parte
         ;//also, sunt 24 de bytes pana la urmatorul byte care are urmatoarea astfel de informatie
-        ;//tin sa zic ca stau mai prost cu romana asa ca scuze
         movl $0, %edx                           ;//contor info
         et_superloop:
             movl aux12, %ecx
