@@ -1,870 +1,618 @@
-.data
-    s: .space 1025                              ;//Memoria
-    numar: .space 4                             ;//Numar de operatii
-    cod: .space 4                               ;//Codul operatiei
-    n: .space 4                                 ;//Numar de fisiere existente
-    flist: .space 255                           ;//Lista de fisiere
-    aux: .space 4                               ;//Auxiliara pt defragmentation
-    id: .space 4                                ;//Id fisier
-    dim: .space 4                               ;//Dimensiune fisier
-    startx: .space 4                            ;//Prima pozitie
-    endx: .space 4                              ;//Ultima pozitie  
-    x: .space 4                                 ;//Numar actual citit
-    index: .space 4                             ;//Indicele din memorie
-    formatStringCitire: .asciz "%ld"            ;//Ce citim
-    formatString0: .asciz "%d: (%d, %d)\n"      ;//Output pentru 1 3 4
-    formatString1: .asciz "(%d, %d)\n"          ;//Output pentru 2
-    ok: .space 4                                ;//Auxiliara
-    aux3: .space 4
-.text
-citire_rand:
-    pushl %ebp
-    mov %esp, %ebp
-
-    pushl $x
-    pushl $formatStringCitire
-    call scanf
-    popl %ebx
-    popl %ebx
-
-    popl %ebp
-    ret
-scriere134:
-    pushl %ebp
-    mov %esp, %ebp
-
-    pushl endx
-    pushl startx
-    pushl id
-    pushl $formatString0
-    call printf
-    popl %ebx
-    popl %ebx
-    popl %ebx
-    popl %ebx
-
-    pushl $0
-    call fflush
-    popl %ebx
-
-    popl %ebp
-    ret
-scriere2:
-    pushl %ebp
-    mov %esp, %ebp
-
-    pushl endx
-    pushl startx
-    pushl $formatString1
-    call printf
-    popl %ebx
-    popl %ebx
-    popl %ebx
-
-    pushl $0
-    call fflush
-    popl %ebx
-
-    popl %ebp
-    ret   
-opadd:    
-    pushl %ebp
-    mov %esp, %ebp
-    pushl %ebx
-
-    subl $4, %esp
-    movl $0, -4(%ebp)                           ;//var loc
-
-    mov 16(%ebp), %edi                          ;//Selectare memorie
-
-    et_div_dim:
-        movl $0, %edx
-        movl 8(%ebp), %eax                      ;//eax = dimensiune
-        movl $8, %ecx
-        idiv %ecx                               ;//transformarea (impartire la 8) dimensiune
-        movl %eax, 8(%ebp)
-
-        movl $0, %ecx
-
-        cmp $0, %edx                            ;//verificam daca exista rest
-        jne et_conv
-        movl %eax, 8(%ebp)
-        movl %eax, %ebx
-        jmp et_verif
-    et_conv:
-        movl $0, %edx
-        mov 8(%ebp), %eax
-        add $1, %eax                         
-        movl %eax, 8(%ebp)                      ;//rotujirea in sus a dimensiunii
-        movl %eax, %ebx
-    et_verif:
-        cmp $1024, %ecx
-        jg et_exit_3
-
-        movl $0, %edx
-        movb (%edi, %ecx, 1), %dl               ;//parcurgerea memoriei
-
-        movl %ecx, -4(%ebp)                     ;//salvam contorul
-
-        cmp $0, %edx                            ;//verificare spatiu liber
-        je et_verif2
-
-        inc %ecx                                ;//incrementare memorie
-        jmp et_verif
-    et_verif2:
-        cmp $1024, %ecx
-        jg et_exit_3
-        cmp $0, %ebx
-        je et_insert
-
-        movl $0, %edx
-        movb (%edi, %ecx, 1), %dl               ;//parcurgerea memoriei
-
-        dec %ebx
-        inc %ecx
-
-        cmp $0, %edx
-        jne et_verif_exit                       ;//ca sa vedem daca exista pozitii consecutive libere de memorie
-
-        jmp et_verif2
-    et_verif_exit:
-        movl 8(%ebp), %ebx                      ;//reluam valoarea dimensiunii
-        movl -4(%ebp), %ecx                     ;//reluam de la pozitia salvata
-        inc %ecx                                ;//incrementare memorie
-        jmp et_verif
-    et_insert:
-        movl -4(%ebp), %ecx
-        movl %ecx, %edx
-        movl %edx, 20(%ebp)                     ;//startx
-    et_insert_2:  
-        cmp $0, %eax                            ;//dimensiunea ramasa de introdus
-        je et_exit_add
-
-        movl 12(%ebp), %edx                     ;//inserarm id - ul
-        movb %dl, (%edi, %ecx, 1)
-        add $1, %ecx
-        sub $1, %eax
-        jmp et_insert_2
-    et_exit_3:
-        movl $0, %edx
-        movl %edx, 20(%ebp)                     ;//startx
-        movl %edx, 24(%ebp)                     ;//endx
-        jmp et_exit_add_final
-    et_exit_add:
-        dec %ecx
-        movl %ecx, %edx
-        movl %edi, 16(%ebp)
-        movl %edx, 24(%ebp)                     ;//endx
-    et_exit_add_final:
-
-    addl $4, %esp
-
-    pop %ebx
-    popl %ebp
-    ret
-opget:
-    pushl %ebp
-    mov %esp, %ebp
-    pushl %ebx
-    
-    movl 8(%ebp), %eax                           ;//Selectare id
-    movl 12(%ebp), %edi                          ;//Selectare memorie
-
-    movl $0, %ecx
-
-    et_verif_get:
-        cmp $1024, %ecx
-        jg et_exit_get_1
-
-        movl $0, %edx
-        movb (%edi, %ecx, 1), %dl               ;//parcurgerea memoriei
-        
-        cmp %eax, %edx                          ;//verificare existenta id - ului
-        je et_indexstartget
-
-        inc %ecx                                ;//incrementare memorie
-        jmp et_verif_get
-    et_indexstartget:
-        movl $0, 16(%ebp)
-        movl %ecx, 16(%ebp)                      ;//startx
-    et_indexendget:
-        cmp %eax, %edx
-        jne et_exit_get_2
-
-        movl $0, %edx
-        movb (%edi, %ecx, 1), %dl               ;//parcurgerea memoriei
-
-        movl $0, 20(%ebp)
-        movl %ecx, 20(%ebp)                      ;//endx
-
-        inc %ecx                                ;//incrementare memorie
-        jmp et_indexendget
-    et_exit_get_1:
-        movl $0, %edx
-        movl %edx, 16(%ebp)                     ;//startx
-        movl %edx, 20(%ebp)                     ;//endx
-        jmp et_exit_get_3
-    et_exit_get_2:
-        movl 20(%ebp), %ecx 
-        sub $1, %ecx
-        movl %ecx, 20(%ebp)                      ;//endx
-    et_exit_get_3:
-    pop %ebx
-    popl %ebp
-    ret
-opdelete:
-    pushl %ebp
-    mov %esp, %ebp
-    pushl %ebx
-    
-    mov 8(%ebp), %eax                           ;//Selectare id
-    mov 12(%ebp), %edi                          ;//Selectare memorie
-
-    mov $0, %ecx
-
-    et_verif_delete:
-        cmp $1024, %ecx
-        jg et_exit_delete_1
-
-        movl $0, %edx
-        movb (%edi, %ecx, 1), %dl               ;//parcurgerea memoriei
-        
-        cmp %eax, %edx                          ;//verificare existenta id - ului
-        je et_indexdelete
-
-        inc %ecx                                ;//incrementare memorie
-        jmp et_verif_delete
-    et_indexdelete:
-        cmp %eax, %edx
-        jne et_exit_delete_1
-
-        movl $0, %edx
-        movb %dl, (%edi, %ecx, 1)               ;//parcurgerea memoriei
-        movb 1(%edi, %ecx, 1), %dl
-
-        inc %ecx                                ;//incrementare memorie
-        jmp et_indexdelete
-    et_exit_delete_1:
-    pop %ebx
-    popl %ebp
-    ret
-opdefragmentation:
-    pushl %ebp
-    mov %esp, %ebp
-    pushl %ebx
-    
-    movl 8(%ebp), %edi                          ;//selectare memorie
-    movl 12(%ebp), %edx                         ;//selectare lungime memorie
-    dec %edx
-    movl %edx, aux
-    movl $0, %ecx
-
-    et_loop_defrag_1:
-        cmp aux, %ecx                           ;//cmp index cu memorie ca sa iesim daca e cazul
-        je et_exit_defrag 
-
-        movl $0, %edx
-        movb (%edi,%ecx,1), %dl                 ;//extragem primul element
-
-        cmp $0, %edx                            ;//vedem daca e 0
-        je et_loop_defrag_2
-        inc %ecx
-        jmp et_loop_defrag_1                    ;//altfel loop
-    et_loop_defrag_2:
-        movl %ecx, %eax                         ;//salvam pozitia lui 0 in eax 
-        inc %ecx
-    et_loop_defrag_3:
-        movl $0, %edx
-        movb (%edi,%ecx,1), %dl                 ;//extragem elementul nr (ecx)
-
-        cmp $0, %edx
-        jne et_defrag_nr                        ;//cautam valoare diferita de 0
-
-        cmp aux, %ecx
-        je et_exit_defrag
-
-        inc %ecx
-        jmp et_loop_defrag_3
-    et_defrag_nr:
-        movb %dl, (%edi,%eax,1)                ;//inlocuim cu valoarea
-        movb $0, (%edi,%ecx,1)                  ;//inlocuim cu 0 in memorie
-        movl %eax, %ecx
-        jmp et_loop_defrag_1
-    et_exit_defrag:
-    pop %ebx
-    popl %ebp
-    ret
-opsortflist:
-    pushl %ebp
-    mov %esp, %ebp
-    pushl %ebx
-
-    sub $32, %esp
-    movl $0, -4(%ebp)                           ;//starx pentru i-1
-    movl $0, -8(%ebp)                           ;//endx pentru i
-    movl $0, -12(%ebp)                          ;//id element i-1
-    movl n, %ebx
-    movl %ebx, -28(%ebp)
-
-    movl 8(%ebp), %esi                          ;//adresa listei de fisiere
-    movl $1, %ebx                               ;//contor pentru numar de fisiere
-
-    et_cautare:
-        cmp 12(%ebp), %ebx
-        jg et_exit_cautare_fail
-
-        movl $0, %edx
-        movb -1(%esi,%ebx,1), %dl               ;//elementul i-1 din lista de fisiere
-        movl %edx, id
-        movl %edx, -12(%ebp)                    ;//id element i-1
-
-        movl %ebx, -16(%ebp)
-        ;/////////////////////////////////////////////////////////
-        pushl %eax
-        pushl %ecx
-        pushl %edx
-
-        pushl $endx
-        pushl $startx
-        pushl $s
-        pushl id
-        call opget                              ;//operatia de get pentru elementul i-1
-        pop %ebx
-        pop %ebx
-        pop startx
-        pop endx
-
-        pop %edx
-        pop %ecx
-        pop %eax
-        ;/////////////////////////////////////////////////////////
-        movl -16(%ebp), %ebx
-        
-        movl startx, %eax
-        movl %eax, -4(%ebp)                     ;//starx pentru i-1
-
-        movl $0, %edx
-        movb (%esi,%ebx,1), %dl                 ;//elementul i din lista de fisiere
-        movl %edx, id
-
-        cmp $0, %edx
-        je et_sort_salt1
-        movl %ebx, -16(%ebp)
-        ;/////////////////////////////////////////////////////////
-        pushl %eax
-        pushl %ecx
-        pushl %edx
-
-        pushl $endx
-        pushl $startx
-        pushl $s
-        pushl id
-        call opget                              ;//operatia de get pentru elementul i
-        pop id
-        pop %ebx
-        pop startx
-        pop endx
-
-        pop %edx
-        pop %ecx
-        pop %eax
-        ;///////////////////////////////////////////////////////////
-        movl -16(%ebp), %ebx
-
-        movl endx, %eax
-        movl %eax, -8(%ebp)                     ;//endx pentru i
-        movl -4(%ebp), %eax
-        cmp -8(%ebp), %eax                      ;//comparam i si i-1
-        jg et_exit_cautare
-
-        et_sort_salt1:
-
-        inc %ebx
-        jmp et_cautare
-    et_exit_cautare:
-        movl $0, -4(%ebp)                       ;//starx pentru i-1
-        movl $0, -8(%ebp)                       ;//endx pentru i
-        movl endx, %eax
-        movl %eax, -20(%ebp)                    ;//salvam endx
-        movl $0, %eax
-        movl %eax, endx
-        movl %eax, startx
-
-        movl $0, %edx
-        movb %dl, (%esi,%ebx,1)
-        movl id, %edx
-        movl %edx, -12(%ebp)                    ;//id element i
-
-        jmp et_exit_cautare_succes
-    et_exit_cautare_fail:
-        jmp et_exit_total
-    et_exit_cautare_succes:
-
-    movl -12(%ebp), %edx    
-
-    movl 8(%ebp), %esi                          ;//adresa listei de fisiere
-    movl $1, %ebx                               ;//contor pentru numar de fisiere 
-
-    et_cautare_insert:
-        cmp 12(%ebp), %ebx
-        jg et_exit_cautare_insert
-
-        movl $0, %edx
-        movb -1(%esi,%ebx,1), %dl               ;//elementul i-1 din lista de fisiere
-        movl %edx, id
-
-        movl %ebx, -16(%ebp)
-        ;/////////////////////////////////////////////////////////
-        pushl %eax
-        pushl %ecx
-        pushl %edx
-
-        pushl $endx
-        pushl $startx
-        pushl $s
-        pushl id
-        call opget                              ;//operatia de get pentru elementul i-1
-        pop %ebx
-        pop %ebx
-        pop startx
-        pop endx
-
-        pop %edx
-        pop %ecx
-        pop %eax
-        ;/////////////////////////////////////////////////////////
-        movl -16(%ebp), %ebx
-
-        movl $1, %eax
-        movl %eax, ok                           
-
-        movl -20(%ebp), %eax                    ;//endx pentru id salvat
-
-        cmp startx, %eax                        ;//startx pentru id i-1
-        jl et_loop_insert
-        jmp et_cautare_insert_continue
-
-        et_loop_insert:
-            movl $0, %eax
-            movl %eax, ok
-
-            movl id, %eax
-            movl %eax, -24(%ebp)                ;//id existent in flist se salveaza
-
-            movl -12(%ebp), %eax                ;//id pentru insert 
-            movb %al, -1(%esi,%ebx,1)
-
-            movl -24(%ebp), %eax
-            movl %eax, -12(%ebp)
-
-            cmp -28(%ebp), %ebx
-            je et_loop_insert_final
-            jmp et_loop_insert_continue
-
-            et_loop_insert_final:
-                movl id, %edx
-                movb %dl, (%esi,%ebx,1)
-
-            et_loop_insert_continue:
-
-        et_cautare_insert_continue:
-
-        inc %ebx
-        jmp et_cautare_insert
-    et_exit_cautare_insert:
-        movl ok, %eax
-        cmp $1, %eax
-        jne et_exit_total
-
-        movl -24(%ebp), %edx
-        movb %dl, -2(%esi,%ebx,1)
-        
-    et_exit_total:
-
-        pushl %eax
-        pushl %ecx
-        pushl %edx
-
-        pushl n
-        pushl $255
-        pushl $flist
-        call opdefragmentation                  ;//operatia de defragmentation a listei de fisiere
-        pop %ebx
-        pop %ebx
-        pop %ebx
-
-        pop %edx
-        pop %ecx
-        pop %eax
-    
-    addl $32, %esp
-
-    pop %ebx
-    popl %ebp
-    ret
-.global main
-main:
+.macro SAVE_REGS
     pushl %eax
     pushl %ecx
     pushl %edx
-    call citire_rand                            ;//Cititm numarul de operatii
-    pop %edx
-    pop %ecx
-    pop %eax
+.endm
 
-    movl x, %ecx                                ;//contor de operatii
-    movl %ecx, numar                            ;//numar de operatii
+.macro RESTORE_REGS
+    popl %edx
+    popl %ecx
+    popl %eax
+.endm
 
-    et_loop_operatii:
-        movl numar, %ecx  
-        sub $1, %ecx 
-        movl %ecx, numar 
-        cmp $0, %ecx
-        jl et_exit
+# Macro pentru citirea unei variabile
+.macro READ_NUM target_addr
+    SAVE_REGS
+    pushl \target_addr
+    pushl $formatStringCitire
+    call scanf
+    addl $8, %esp
+    RESTORE_REGS
+.endm
 
-        pushl %eax
-        pushl %ecx
-        pushl %edx
-        call citire_rand                        ;//Citim codul operatiei
-        pop %edx
-        pop %ecx
-        pop %eax
+# Macro pentru scrierea pentru cazurile 1, 3, 4
+.macro PRINT_FORMAT_0 format_id, start_val, end_val
+    SAVE_REGS
+    pushl \end_val
+    pushl \start_val
+    pushl \format_id
+    pushl $formatString0
+    call printf
+    addl $16, %esp
+    pushl $0
+    call fflush
+    addl $4, %esp
+    RESTORE_REGS
+.endm
 
-        movl x, %eax                            ;//eax = codul operatiei
-        movl %eax, cod                          ;//codul operatiei
+# Macro pentru scrierea pentru cazul 2 (Get)
+.macro PRINT_FORMAT_1 start_val, end_val
+    SAVE_REGS
+    pushl \end_val
+    pushl \start_val
+    pushl $formatString1
+    call printf
+    addl $12, %esp
+    pushl $0
+    call fflush
+    addl $4, %esp
+    RESTORE_REGS
+.endm
 
-        cmp $1, %eax
-        je et_add
-        cmp $2, %eax
-        je et_get
-        cmp $3, %eax
-        je et_delete
-        cmp $4, %eax
-        je et_defragmentation                   ;//comparatiile
-    et_add:           
-        pushl %eax
-        pushl %ecx
-        pushl %edx
-        call citire_rand                        ;//citim numar de fisiere
-        pop %edx
-        pop %ecx
-        pop %eax
+.data
+    s: .space 1025                              # Memoria (1024 + 1)
+    numar: .space 4                             # Numar de operatii
+    cod: .space 4                               # Codul operatiei
+    n: .space 4                                 # Numar de fisiere existente
+    flist: .space 255                           # Lista de fisiere
+    aux: .space 4                               # Auxiliara pt defragmentation
+    id: .space 4                                # Id fisier
+    dim: .space 4                               # Dimensiune fisier
+    startx: .space 4                            # Prima pozitie
+    endx: .space 4                              # Ultima pozitie
+    x: .space 4                                 # Numar actual citit
+    index: .space 4                             # Indicele din memorie
+    formatStringCitire: .asciz "%ld"            # Ce citim
+    formatString0: .asciz "%d: (%d, %d)\n"      # Output pentru 1 3 4
+    formatString1: .asciz "(%d, %d)\n"          # Output pentru 2
 
-        movl x, %eax                            ;//eax = numar de fisiere
-        addl %eax, n                            ;//n = numar de fisiere care sunt adaugate
-    et_loop_add:
-        pushl %eax
-        pushl %ecx
-        pushl %edx
-        call citire_rand                        ;//citim id fisier
-        pop %edx
-        pop %ecx
-        pop %eax
+.text
+# ==========================================
+# FUNCTII PRINCIPALE (Add, Get, Delete, Defrag, Sort)
+# ==========================================
+opadd:
+    pushl %ebp
+    movl %esp, %ebp
+    pushl %ebx
+    pushl %edi
+    pushl %esi
 
-        movl x, %edx
-        movb %dl, id
-        ;///////////////////////////////////////////////////
-        pushl %eax
-        pushl %ecx
-        pushl %edx
+    movl 16(%ebp), %edi
+    movl 8(%ebp), %eax
+    addl $7, %eax
+    shrl $3, %eax
+    movl %eax, 8(%ebp)
 
-        pushl $endx
-        pushl $startx
-        pushl $flist
-        pushl id
-        pushl $1
+    movl $0, %ecx
+    movl $0, %ebx
+    movl $0, %esi
 
-        call opadd                              ;//operatia de add in lista de fisiere
+find_free_loop:
+    cmpl $1024, %ecx
+    jge alloc_failed
 
-        pop %ebx
-        pop %ebx
-        pop %ebx
-        pop startx
-        pop endx
+    cmpb $0, (%edi, %ecx, 1)
+    jne reset_streak
 
-        pop %edx
-        pop %ecx
-        pop %eax
-        ;//////////////////////////////////////////////////
-        pushl %eax
-        pushl %ecx
-        pushl %edx
-        call citire_rand                        ;//citim dimensiune fisier
-        pop %edx
-        pop %ecx
-        pop %eax
+    cmpl $0, %ebx
+    jne increment_streak
+    movl %ecx, %esi
 
-        movl x, %edx
-        movl %edx, dim
-        ;///////////////////////////////////////////////////
-        pushl %eax
-        pushl %ecx
-        pushl %edx
+increment_streak:
+    incl %ebx
+    incl %ecx
 
-        pushl $endx
-        pushl $startx
-        pushl $s
-        pushl id
-        pushl dim
+    cmpl 8(%ebp), %ebx
+    je alloc_success
+    jmp find_free_loop
 
-        call opadd                              ;//operatia de add in memorie
+reset_streak:
+    movl $0, %ebx
+    incl %ecx
+    jmp find_free_loop
 
-        pop %ebx
-        pop %ebx
-        pop %ebx
-        pop startx
-        pop endx
+alloc_failed:
+    movl $0, %eax
+    movl %eax, 20(%ebp)
+    movl %eax, 24(%ebp)
+    jmp opadd_end
 
-        pop %edx
-        pop %ecx
-        pop %eax
-        ;//////////////////////////////////////////////////
-        movl endx, %ebx
-        cmp $0, %ebx
-        jne et_add_continue
+alloc_success:
+    movl %esi, 20(%ebp)
+    movl %ecx, %edx
+    decl %edx
+    movl %edx, 24(%ebp)
 
-        ;//////////////////////////////////////////////////////////
-        pushl %eax
-        pushl %ecx
-        pushl %edx
+    movl %esi, %ecx
+    movl 12(%ebp), %edx
+    movl 8(%ebp), %ebx
 
-        pushl $flist
-        pushl id
-        call opdelete                           ;//operatia de delete din lista de fisiere
-        pop %ebx
-        pop %ebx
+fill_memory_loop:
+    cmpl $0, %ebx
+    je opadd_end
+    movb %dl, (%edi, %ecx, 1)
+    incl %ecx
+    decl %ebx
+    jmp fill_memory_loop
 
-        pop %edx
-        pop %ecx
-        pop %eax
-        ;//////////////////////////////////////////////////////////
-        movl n, %ebx
-        dec %ebx
-        movl %ebx, n
+opadd_end:
+    popl %esi
+    popl %edi
+    popl %ebx
+    popl %ebp
+    ret
 
-        et_add_continue:
-        pushl %eax
-        pushl %ecx
-        pushl %edx
-        call scriere134                         ;//operatia de scriere pt add
-        pop %edx
-        pop %ecx
-        pop %eax
-        ;//////////////////////////////////////////////////
-        movl n, %edx
-        cmp $1, %edx
-        jle et_loop_add_continue
+opget:
+    pushl %ebp
+    movl %esp, %ebp
+    pushl %edi
 
-        pushl %eax
-        pushl %ecx
-        pushl %edx
+    movl 8(%ebp), %eax
+    movl 12(%ebp), %edi
+    movl $0, %ecx
 
-        pushl n
-        pushl $flist
-        call opsortflist                        ;//operatia de sortare a listei de fisiere
-        pop %ebx
-        pop %ebx
+find_start_loop:
+    cmpl $1024, %ecx
+    jge not_found
+    cmpb %al, (%edi, %ecx, 1)
+    je start_found
+    incl %ecx
+    jmp find_start_loop
 
-        pop %edx
-        pop %ecx
-        pop %eax
-        ;///////////////////////////////////////////////
-        et_loop_add_continue:
-        movl dim, %edx
+start_found:
+    movl %ecx, 16(%ebp)
 
-        movl $0, %ebx
+find_end_loop:
+    incl %ecx
+    cmpl $1024, %ecx
+    jge end_found
+    cmpb %al, (%edi, %ecx, 1)
+    jne end_found
+    jmp find_end_loop
 
-        sub $1, %eax
-        cmp $0, %eax
-        jne et_loop_add
+end_found:
+    decl %ecx
+    movl %ecx, 20(%ebp)
+    jmp opget_end
 
-        jmp et_loop_operatii
-    et_get:
-        pushl %eax
-        pushl %ecx
-        pushl %edx
-        call citire_rand                        ;//citere id pt get   
-        pop %edx
-        pop %ecx
-        pop %eax
+not_found:
+    movl $0, 16(%ebp)
+    movl $0, 20(%ebp)
 
-        movl x, %edx
-        movl %edx, id                           ;//id fisier de get-uit
-        ;/////////////////////////////////////////////////////////
-        pushl %eax
-        pushl %ecx
-        pushl %edx
+opget_end:
+    popl %edi
+    popl %ebp
+    ret
 
-        pushl $endx
-        pushl $startx
-        pushl $s
-        pushl id
-        call opget                              ;//operatia de get
-        pop id
-        pop %ebx
-        pop startx
-        pop endx
+opdelete:
+    pushl %ebp
+    movl %esp, %ebp
+    pushl %edi
 
-        pop %edx
-        pop %ecx
-        pop %eax
-        ;///////////////////////////////////////////////////////////
-        pushl %eax
-        pushl %ecx
-        pushl %edx
-        call scriere2                           ;//operatia de scriere pt get
-        pop %edx
-        pop %ecx
-        pop %eax
+    movl 8(%ebp), %eax
+    movl 12(%ebp), %edi
+    movl $0, %ecx
 
-        jmp et_loop_operatii
-    et_delete:
-        pushl %eax
-        pushl %ecx
-        pushl %edx
-        call citire_rand                        ;//citere id pt delete   
-        pop %edx
-        pop %ecx
-        pop %eax
+delete_fast_search:
+    cmpl $1024, %ecx
+    jge opdelete_end
+    cmpb %al, (%edi, %ecx, 1)
+    je delete_block
+    incl %ecx
+    jmp delete_fast_search
 
-        movl x, %edx
-        movl %edx, id                           ;//id fisier de sters
-        ;/////////////////////////////////////////////////////////
-        pushl %eax
-        pushl %ecx
-        pushl %edx
+delete_block:
+    cmpl $1024, %ecx
+    jge opdelete_end
+    cmpb %al, (%edi, %ecx, 1)
+    jne opdelete_end
+    movb $0, (%edi, %ecx, 1)
+    incl %ecx
+    jmp delete_block
 
-        pushl $endx
-        pushl $startx
-        pushl $s
-        pushl id
-        call opget                              ;//operatia de get
-        pop id
-        pop %ebx
-        pop startx
-        pop endx
+opdelete_end:
+    popl %edi
+    popl %ebp
+    ret
 
-        pop %edx
-        pop %ecx
-        pop %eax
-        ;/////////////////////////////////////////////////////////
+opdefragmentation:
+    pushl %ebp
+    movl %esp, %ebp
+    pushl %edi
+    pushl %esi
 
-        movl endx, %edx
-        cmp $0, %edx
-        je et_delete_skip
+    movl 8(%ebp), %edi
+    movl 12(%ebp), %edx
 
-        movl x, %edx
-        movl %edx, id                           ;//id fisier de sters
+    movl $0, %eax
+    movl $0, %ecx
 
-        movl n, %eax
-        sub $1, %eax
-        movl %eax, n                            ;//numarul nou de fisiere
-        ;/////////////////////////////////////////////////////////
-        pushl %eax
-        pushl %ecx
-        pushl %edx
+defrag_read_loop:
+    cmpl %edx, %ecx
+    jge defrag_fill_zeroes
 
-        pushl $s
-        pushl id
-        call opdelete                           ;//operatia de delete din memorie
-        pop %ebx
-        pop %ebx
+    movb (%edi, %ecx, 1), %bl
+    cmpb $0, %bl
+    je defrag_continue
+    movb %bl, (%edi, %eax, 1)
+    incl %eax
 
-        pop %edx
-        pop %ecx
-        pop %eax
-        ;//////////////////////////////////////////////////////////
-        pushl %eax
-        pushl %ecx
-        pushl %edx
+defrag_continue:
+    incl %ecx
+    jmp defrag_read_loop
 
-        pushl $flist
-        pushl id
-        call opdelete                           ;//operatia de delete din lista de fisiere
-        pop %ebx
-        pop %ebx
+defrag_fill_zeroes:
+    cmpl %edx, %eax
+    jge defrag_end
+    movb $0, (%edi, %eax, 1)
+    incl %eax
+    jmp defrag_fill_zeroes
 
-        pop %edx
-        pop %ecx
-        pop %eax
-        ;//////////////////////////////////////////////////////////
-        pushl %eax
-        pushl %ecx
-        pushl %edx
+defrag_end:
+    popl %esi
+    popl %edi
+    popl %ebp
+    ret
 
-        pushl n
-        pushl $255
-        pushl $flist
-        call opdefragmentation                  ;//operatia de defragmentation a listei de fisiere
-        pop %ebx
-        pop %ebx
-        pop %ebx
+opsortflist:
+    pushl %ebp
+    movl %esp, %ebp
+    pushl %ebx
+    pushl %esi
+    pushl %edi
 
-        pop %edx
-        pop %ecx
-        pop %eax
-        ;///////////////////////////////////////////////
-        et_delete_skip:
+    subl $32, %esp
+    movl $0, -4(%ebp)
+    movl $0, -8(%ebp)
+    movl $0, -12(%ebp)
 
-        jmp et_loop_scriere
-    et_defragmentation:
-        ;/////////////////////////////////////////////////
-        pushl %eax
-        pushl %ecx
-        pushl %edx
+    movl n, %ebx
+    movl %ebx, -28(%ebp)
+    movl 8(%ebp), %esi
+    movl $1, %ebx
 
-        pushl $1024
-        pushl $s
-        call opdefragmentation                  ;//operatia de defragmentation a memoriei
-        pop %ebx
-        pop %ebx
+sort_search_loop:
+    cmpl 12(%ebp), %ebx
+    jg sort_search_fail
+    movl $0, %eax
+    movb -1(%esi, %ebx, 1), %al
+    movl %eax, id
+    movl %eax, -12(%ebp)
+    movl %ebx, -16(%ebp)
 
-        pop %edx
-        pop %ecx
-        pop %eax
-        ;///////////////////////////////////////////////
-    et_loop_scriere:
-        movl $0, %eax
-        movl $0, %ebx
-        movl $0, %edx
-        lea flist, %esi
-    et_loop_scriere_memorie:
-        movl $0, %edx
-        movb (%esi,%eax,1), %dl 
-        movl %edx, id
-        ;/////////////////////////////////////////
-        add $1, %eax
-        cmp n, %eax
-        jg et_loop_operatii
-        ;/////////////////////////////////////////////////////////
-        pushl %eax
-        pushl %ecx
-        pushl %edx
+    SAVE_REGS
+    pushl $endx
+    pushl $startx
+    pushl $s
+    pushl id
+    call opget
+    addl $16, %esp
+    RESTORE_REGS
 
-        pushl $endx
-        pushl $startx
-        pushl $s
-        pushl id
-        call opget                              ;//operatia de get
-        pop id
-        pop %ebx
-        pop startx
-        pop endx
+    movl -16(%ebp), %ebx
+    movl startx, %eax
+    movl %eax, -4(%ebp)
 
-        pop %edx
-        pop %ecx
-        pop %eax
-        ;///////////////////////////////////////////////////////////
-        pushl %eax
-        pushl %ecx
-        pushl %edx
-        call scriere134                         ;//operatia de scriere memorie
-        pop %edx
-        pop %ecx
-        pop %eax
+    movl $0, %eax
+    movb (%esi, %ebx, 1), %al
+    movl %eax, id
 
-        jmp et_loop_scriere_memorie
-    et_exit: 
-        movl $1, %eax
-        xorl %ebx, %ebx
-        int $0x80
+    cmpl $0, %eax
+    je sort_jump_1
+
+    movl %ebx, -16(%ebp)
+
+    SAVE_REGS
+    pushl $endx
+    pushl $startx
+    pushl $s
+    pushl id
+    call opget
+    addl $16, %esp
+    RESTORE_REGS
+
+    movl -16(%ebp), %ebx
+    movl endx, %eax
+    movl %eax, -8(%ebp)
+    movl -4(%ebp), %ecx
+    cmpl %eax, %ecx
+    jg sort_exit_search
+
+sort_jump_1:
+    incl %ebx
+    jmp sort_search_loop
+
+sort_exit_search:
+    movl $0, -4(%ebp)
+    movl $0, -8(%ebp)
+    movl endx, %eax
+    movl %eax, -20(%ebp)
+    movl $0, endx
+    movl $0, startx
+    movb %dl, (%esi, %ebx, 1)
+    movl id, %eax
+    movl %eax, -12(%ebp)
+    jmp sort_search_success
+
+sort_search_fail:
+    jmp sort_exit_total
+
+sort_search_success:
+    movl -12(%ebp), %edx
+    movl 8(%ebp), %esi
+    movl $1, %ebx
+
+sort_insert_loop:
+    cmpl 12(%ebp), %ebx
+    jg sort_insert_exit
+    movl $0, %eax
+    movb -1(%esi, %ebx, 1), %al
+    movl %eax, id
+    movl %ebx, -16(%ebp)
+
+    SAVE_REGS
+    pushl $endx
+    pushl $startx
+    pushl $s
+    pushl id
+    call opget
+    addl $16, %esp
+    RESTORE_REGS
+
+    movl -16(%ebp), %ebx
+    movl $1, ok
+
+    movl -20(%ebp), %eax
+    cmpl startx, %eax
+    jl loop_insert_exec
+    jmp insert_continue
+
+loop_insert_exec:
+    movl $0, ok
+    movl id, %eax
+    movl %eax, -24(%ebp)
+    movl -12(%ebp), %eax
+    movb %al, -1(%esi, %ebx, 1)
+    movl -24(%ebp), %eax
+    movl %eax, -12(%ebp)
+
+    cmpl -28(%ebp), %ebx
+    je loop_insert_final
+    jmp loop_insert_continue
+
+loop_insert_final:
+    movl id, %eax
+    movb %al, (%esi, %ebx, 1)
+
+loop_insert_continue:
+insert_continue:
+    incl %ebx
+    jmp sort_insert_loop
+
+sort_insert_exit:
+    cmpl $1, ok
+    jne sort_exit_total
+    movl -24(%ebp), %eax
+    movb %al, -2(%esi, %ebx, 1)
+
+sort_exit_total:
+    SAVE_REGS
+    pushl n
+    pushl $255
+    pushl $flist
+    call opdefragmentation
+    addl $12, %esp
+    RESTORE_REGS
+
+    addl $32, %esp
+    popl %edi
+    popl %esi
+    popl %ebx
+    popl %ebp
+    ret
+
+# ==========================================
+# MAIN ROUTINE
+# ==========================================
+.global main
+main:
+    pushl %ebp
+    movl %esp, %ebp
+
+    READ_NUM $x
+    movl x, %ecx
+    movl %ecx, numar
+
+et_loop_operatii:
+    movl numar, %ecx
+    decl %ecx
+    movl %ecx, numar
+    cmpl $0, %ecx
+    jl et_exit
+
+    READ_NUM $x
+    movl x, %eax
+    movl %eax, cod
+
+    cmpl $1, %eax
+    je et_add
+    cmpl $2, %eax
+    je et_get
+    cmpl $3, %eax
+    je et_delete
+    cmpl $4, %eax
+    je et_defragmentation
+    jmp et_loop_operatii
+
+# --- 1: ADD ---
+et_add:
+    READ_NUM $x
+    movl x, %eax
+    addl %eax, n
+
+et_loop_add:
+    READ_NUM $x
+    movl x, %edx
+    movb %dl, id
+
+    SAVE_REGS
+    pushl $endx
+    pushl $startx
+    pushl $flist
+    pushl id
+    pushl $1
+    call opadd
+    addl $20, %esp
+    RESTORE_REGS
+
+    READ_NUM $x
+    movl x, %edx
+    movl %edx, dim
+
+    SAVE_REGS
+    pushl $endx
+    pushl $startx
+    pushl $s
+    pushl id
+    pushl dim
+    call opadd
+    addl $20, %esp
+    RESTORE_REGS
+
+    movl endx, %ebx
+    cmpl $0, %ebx
+    jne et_add_continue
+
+    SAVE_REGS
+    pushl $flist
+    pushl id
+    call opdelete
+    addl $8, %esp
+    RESTORE_REGS
+    decl n
+
+et_add_continue:
+    PRINT_FORMAT_0 id, startx, endx
+
+    movl n, %edx
+    cmpl $1, %edx
+    jle et_loop_add_check
+
+    SAVE_REGS
+    pushl n
+    pushl $flist
+    call opsortflist
+    addl $8, %esp
+    RESTORE_REGS
+
+et_loop_add_check:
+    decl %eax
+    cmpl $0, %eax
+    jne et_loop_add
+    jmp et_loop_operatii
+
+# --- 2: GET ---
+et_get:
+    READ_NUM $x
+    movl x, %edx
+    movl %edx, id
+
+    SAVE_REGS
+    pushl $endx
+    pushl $startx
+    pushl $s
+    pushl id
+    call opget
+    addl $16, %esp
+    RESTORE_REGS
+
+    PRINT_FORMAT_1 start_val=startx, end_val=endx
+    jmp et_loop_operatii
+
+# --- 3: DELETE ---
+et_delete:
+    READ_NUM $x
+    movl x, %edx
+    movl %edx, id
+
+    SAVE_REGS
+    pushl $endx
+    pushl $startx
+    pushl $s
+    pushl id
+    call opget
+    addl $16, %esp
+    RESTORE_REGS
+
+    movl endx, %edx
+    cmpl $0, %edx
+    je et_delete_skip
+    decl n
+
+    SAVE_REGS
+    pushl $s
+    pushl id
+    call opdelete
+    addl $8, %esp
+    RESTORE_REGS
+
+    SAVE_REGS
+    pushl $flist
+    pushl id
+    call opdelete
+    addl $8, %esp
+    RESTORE_REGS
+
+    SAVE_REGS
+    pushl n
+    pushl $255
+    pushl $flist
+    call opdefragmentation
+    addl $12, %esp
+    RESTORE_REGS
+
+et_delete_skip:
+    jmp et_loop_scriere
+
+# --- 4: DEFRAGMENTATION ---
+et_defragmentation:
+    SAVE_REGS
+    pushl $1024
+    pushl $s
+    call opdefragmentation
+    addl $8, %esp
+    RESTORE_REGS
+    jmp et_loop_scriere
+
+# --- PRINT GLOBAL ---
+et_loop_scriere:
+    movl $0, %eax
+    lea flist, %esi
+
+et_loop_scriere_memorie:
+    cmpl n, %eax
+    jge et_loop_operatii
+
+    movl $0, %edx
+    movb (%esi, %eax, 1), %dl
+    movl %edx, id
+
+    SAVE_REGS
+    pushl $endx
+    pushl $startx
+    pushl $s
+    pushl id
+    call opget
+    addl $16, %esp
+    RESTORE_REGS
+
+    PRINT_FORMAT_0 id, startx, endx
+
+    incl %eax
+    jmp et_loop_scriere_memorie
+
+et_exit:
+    popl %ebp
+    movl $1, %eax
+    xorl %ebx, %ebx
+    int $0x80
