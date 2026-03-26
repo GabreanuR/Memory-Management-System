@@ -1,0 +1,14 @@
+# CLion / IntelliJ specific
+.idea/
+cmake-build-*/
+
+# Compiled Object files
+*.o
+
+# Executables
+memory_simulator
+a.out
+
+# Alte fișiere temporare
+*.log
+.DS_Store
